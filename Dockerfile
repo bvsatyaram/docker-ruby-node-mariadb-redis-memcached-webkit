@@ -103,7 +103,8 @@ ENV MEMCACHED_USER=nobody \
 
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-      memcached=${MEMCACHED_VERSION}* \
+      memcached \
+      # memcached=${MEMCACHED_VERSION}* \
  && sed 's/^-d/# -d/' -i /etc/memcached.conf \
  && rm -rf /var/lib/apt/lists/*
 
@@ -113,3 +114,7 @@ RUN chmod 755 /sbin/entrypoint.sh
 EXPOSE 11211/tcp 11211/udp
 ENTRYPOINT ["/sbin/entrypoint.sh"]
 CMD ["/usr/bin/memcached"]
+
+# RUN apt-get update && apt-get install -y memcached
+# RUN pecl install memcached-2.2.0
+# RUN echo extension=memcached.so >> /usr/local/etc/php/conf.d/memcached.ini
