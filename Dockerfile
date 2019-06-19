@@ -1,11 +1,3 @@
-# FROM ruby:2.5.3
-
-# RUN echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
-# RUN cat /etc/*release
-
-# RUN apt-get update && apt-get install -qq -y --no-install-recommends build-essential
-
-
 FROM ubuntu:14.04
 
 # Basics
@@ -15,20 +7,18 @@ RUN \
   apt-get -y upgrade && \
   apt-get install -y build-essential && \
   apt-get install -y software-properties-common && \
-  apt-get install -y byobu curl git htop man unzip vim wget && \
+  apt-get install -y byobu curl git htop openssl man unzip vim wget && \
   rm -rf /var/lib/apt/lists/*
 
-RUN \
-    apt-get update && \
-    apt-get install -y openssl gnupg2
-
-RUN gpg2 --keyserver hkp://pool.sks-keyservers.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
-
+RUN gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
 RUN \curl -L https://get.rvm.io | bash -s stable
-RUN /bin/bash -l -c "rvm requirements"
-RUN /bin/bash -l -c "rvm install 2.5.3"
-RUN /bin/bash -l -c "rvm use 2.5.3 --default"
-RUN /bin/bash -l -c "gem install bundler --no-ri --no-rdoc"
+
+# ruby
+RUN bash -c -l 'rvm install ruby-2.5.3'
+RUN bash -c -l 'rvm use --default 2.5.3'
+
+# bundler
+RUN bash -c -l 'gem install bundler --no-ri --no-rdoc'
 
 # Install Webkit
 RUN apt-get install -y qt5-default libqt5webkit5-dev gstreamer1.0-plugins-base gstreamer1.0-tools gstreamer1.0-x
@@ -51,17 +41,8 @@ RUN \
   sed -i 's/^\(bind-address\s.*\)/# \1/' /etc/mysql/my.cnf && \
   echo "mysqld_safe &" > /tmp/config && \
   echo "mysqladmin --silent --wait=30 ping || exit 1" >> /tmp/config && \
-
-  
-
-#   DROP USER IF EXISTS 'user'@'localhost';
-# CREATE USER 'user'@'localhost' IDENTIFIED BY 'pass';
-# GRANT ALL PRIVILEGES ON database_name.* TO 'user'@'localhost';
   echo "mysql -e 'DROP USER IF EXISTS \"root\"@\"%\";'" >> /tmp/config && \
-  # echo "mysql -e 'CREATE USER \"user\"@\"localhost\" IDENTIFIED BY \"password\";'" >> /tmp/config && \
   echo "mysql -e 'CREATE USER \"root\"@\"%\";'" >> /tmp/config && \
-  # echo "mysql -e 'FLUSH PRIVILEGES;'" >> /tmp/config && \
-  # echo "mysql -e 'FLUSH PRIVILEGES;'" >> /tmp/config && \
 
   echo "mysql -e 'GRANT ALL PRIVILEGES ON *.* TO \"root\"@\"%\" WITH GRANT OPTION;'" >> /tmp/config && \
   bash /tmp/config && \
@@ -108,13 +89,9 @@ RUN apt-get update \
  && sed 's/^-d/# -d/' -i /etc/memcached.conf \
  && rm -rf /var/lib/apt/lists/*
 
-COPY memcached-entrypoint.sh /sbin/entrypoint.sh
+COPY entrypoint.sh /sbin/entrypoint.sh
 RUN chmod 755 /sbin/entrypoint.sh
 
 EXPOSE 11211/tcp 11211/udp
 ENTRYPOINT ["/sbin/entrypoint.sh"]
 CMD ["/usr/bin/memcached"]
-
-# RUN apt-get update && apt-get install -y memcached
-# RUN pecl install memcached-2.2.0
-# RUN echo extension=memcached.so >> /usr/local/etc/php/conf.d/memcached.ini
