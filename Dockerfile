@@ -7,32 +7,44 @@ RUN \
   apt-get -y upgrade && \
   apt-get install -y build-essential && \
   apt-get install -y software-properties-common && \
-  apt-get install -y byobu curl git htop openssl man unzip vim wget && \
+  apt-get install -y byobu curl git htop man unzip vim wget && \
   rm -rf /var/lib/apt/lists/*
 
-RUN gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
-RUN \curl -L https://get.rvm.io | bash -s stable
 
 # ruby
-RUN bash -c -l 'rvm install ruby-2.5.3'
-RUN bash -c -l 'rvm use --default 2.5.3'
-
-# bundler
-RUN bash -c -l 'gem install bundler --no-ri --no-rdoc'
+RUN \
+  gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB && \
+  curl -L https://get.rvm.io | bash -s stable && \
+  bash -c -l 'rvm install ruby-2.5.3' && \
+  bash -c -l 'rvm use --default 2.5.3' && \
+  bash -c -l 'gem install bundler --no-ri --no-rdoc'
 
 # Install Webkit
-RUN apt-get install -y qt5-default libqt5webkit5-dev gstreamer1.0-plugins-base gstreamer1.0-tools gstreamer1.0-x
+RUN apt-get install -y g++ qt5-default libqt5webkit5-dev gstreamer1.0-plugins-base gstreamer1.0-tools gstreamer1.0-x xvfb
+
+# Upgrade openssl
+RUN \
+  wget https://www.openssl.org/source/openssl-1.1.1a.tar.gz && \
+  tar -zxf openssl-1.1.1a.tar.gz && \
+  cd openssl-1.1.1a && \
+  ./config && \
+  make && \
+  mv /usr/bin/openssl ~/tmp && \
+  make install && \
+  ln -s /usr/local/bin/openssl /usr/bin/openssl && \
+  ldconfig && \
+  cd .. && \
+  rm -rf openssl-1.1.1a
 
 # Install Node
-RUN curl -sL https://deb.nodesource.com/setup_8.x -o nodesource_setup.sh && bash nodesource_setup.sh && rm nodesource_setup.sh
-RUN apt-get install -y nodejs
-
-# Install Bundler and Yarn
-RUN /bin/bash -l -c "gem update bundler"
-RUN npm i -g yarn
+RUN \
+  curl -sL https://deb.nodesource.com/setup_8.x -o nodesource_setup.sh && bash nodesource_setup.sh && rm nodesource_setup.sh && \
+  apt-get install -y nodejs && \
+  npm i -g yarn
 
 # Install MySQL
 RUN \
+  apt-get install -y libmariadbclient-dev && \
   apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0xcbcb082a1bb943db && \
   echo "deb http://mariadb.mirror.iweb.com/repo/10.3/ubuntu `lsb_release -cs` main" > /etc/apt/sources.list.d/mariadb.list && \
   apt-get update && \
@@ -81,12 +93,12 @@ EXPOSE 6379
 ENV MEMCACHED_USER=nobody \
     MEMCACHED_VERSION=1.5.16
 
-RUN apt-get update \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-      memcached \
-      # memcached=${MEMCACHED_VERSION}* \
- && sed 's/^-d/# -d/' -i /etc/memcached.conf \
- && rm -rf /var/lib/apt/lists/*
+RUN \
+  apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y memcached&& \
+  # memcached=${MEMCACHED_VERSION}* && \
+  sed 's/^-d/# -d/' -i /etc/memcached.conf && \
+  rm -rf /var/lib/apt/lists/*
 
 COPY entrypoint.sh /sbin/entrypoint.sh
 RUN chmod 755 /sbin/entrypoint.sh
